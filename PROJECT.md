@@ -10,9 +10,10 @@ Coordinate software work across projects through supervised agents, durable task
 
 ## Stan (automatyczny)
 - galaz: `bugfix/windows-firstmate-start` -> https://github.com/gzawadzki/firstmate-chinczyk.git
-- zmiany robocze: 1 plikow | nie wypchniete commity: ? | ostatni commit: 2026-09-30
+- zmiany robocze: 1 plikow | nie wypchniete commity: 0 | ostatni commit: 2026-09-30
 
 ## Ostatnie zmiany (automatyczny, git log -8)
+- `2026-09-30` docs: Classify project context
 - `2026-09-30` fix: Support Windows Herdr session startup
 - `2026-09-30` Import a squashed Firstmate snapshot.
 

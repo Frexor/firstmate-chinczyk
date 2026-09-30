@@ -172,8 +172,12 @@ POLICY="$ROOT/bin/fm-arm-command-policy.mjs"
 
 command -v node >/dev/null 2>&1 || exit 0
 [ -f "$POLICY" ] || exit 0
+POLICY_NODE=$POLICY
+if command -v cygpath >/dev/null 2>&1; then
+  POLICY_NODE=$(cygpath -w "$POLICY") || exit 0
+fi
 
-POLICY_OUTPUT=$(node "$POLICY" --command "$CMD" --root "$ROOT" --home "$ACTIVE_HOME" 2>/dev/null) || exit 0
+POLICY_OUTPUT=$(MSYS2_ARG_CONV_EXCL='*' node "$POLICY_NODE" --command "$CMD" --root "$ROOT" --home "$ACTIVE_HOME" 2>/dev/null) || exit 0
 [ -n "$POLICY_OUTPUT" ] || exit 0
 
 TAB=$(printf '\t')

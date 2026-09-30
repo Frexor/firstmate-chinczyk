@@ -53,7 +53,7 @@ function rawMentionsBroadKill(command) {
 }
 
 function normalizeLineContinuations(source) {
-  return source.replace(/\\\r?\n/g, "");
+  return source.replace(/\\(?:\r?\n)/g, "");
 }
 
 function basename(value) {
@@ -604,7 +604,10 @@ const PROTECTED_SCRIPTS = [
 function protectedIdentity(value, root) {
   const normalized = path.normalize(value);
   for (const { relative, kind } of PROTECTED_SCRIPTS) {
-    if (normalized === relative || normalized === path.join(root, relative) || normalized.endsWith(`/${relative}`)) return kind;
+    const normalizedRelative = path.normalize(relative);
+    if (normalized === normalizedRelative ||
+        normalized === path.join(root, normalizedRelative) ||
+        normalized.endsWith(`${path.sep}${normalizedRelative}`)) return kind;
   }
   return "";
 }
@@ -740,6 +743,7 @@ function isWatcherPgrep(position, context) {
 }
 
 function analyzeProgram(command, context, depth = 0) {
+  command = normalizeLineContinuations(command);
   if (depth > 12) {
     return { error: "recursion limit", protectedFound: rawMentionsProtected(command), broadKill: rawMentionsBroadKill(command), pgrepWatcher: false, watcherPids: new Set() };
   }

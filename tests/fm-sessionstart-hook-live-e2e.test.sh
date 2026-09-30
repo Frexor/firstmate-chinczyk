@@ -169,7 +169,11 @@ SH
 
   case "$harness" in
     claude) mkdir -p "$lab/.claude"; cp "$ROOT/.claude/settings.json" "$lab/.claude/settings.json" ;;
-    codex) mkdir -p "$lab/.codex"; cp "$ROOT/.codex/hooks.json" "$lab/.codex/hooks.json" ;;
+    codex)
+      mkdir -p "$lab/.codex"
+      cp "$ROOT/.codex/hooks.json" "$lab/.codex/hooks.json"
+      cp "$ROOT/bin/fm-codex-hook.cjs" "$lab/bin/fm-codex-hook.cjs"
+      ;;
     pi)
       mkdir -p "$lab/.pi/extensions/lib"
       cp "$ROOT/.pi/extensions/fm-primary-turnend-guard.ts" "$lab/.pi/extensions/"

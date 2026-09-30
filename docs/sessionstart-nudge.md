@@ -236,7 +236,7 @@ The `.codex/hooks.json` transport does three things:
 
 1. It anchors to the hook process working directory.
 2. It verifies a Firstmate-shaped hook-bearing root.
-3. It pipes the hook payload into the wrapper with a 180s timeout.
+3. It uses `bin/fm-codex-hook.cjs` to locate Git Bash on Windows and pipe the hook payload into the wrapper with a 180s timeout.
 
 Native stdout context injection is supported under `codex exec`.
 

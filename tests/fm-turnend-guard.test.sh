@@ -183,6 +183,7 @@ test_predicate_relay_shim_is_not_a_custom_check() {
 install_guard_scripts() {
   local dir=$1
   mkdir -p "$dir/bin"
+  cp "$ROOT/bin/fm-codex-hook.cjs" "$dir/bin/fm-codex-hook.cjs"
   cp "$ROOT/bin/fm-turnend-guard.sh" "$dir/bin/fm-turnend-guard.sh"
   cp "$ROOT/bin/fm-turnend-guard-grok.sh" "$dir/bin/fm-turnend-guard-grok.sh"
   cp "$ROOT/bin/fm-operational-input.sh" "$dir/bin/fm-operational-input.sh"

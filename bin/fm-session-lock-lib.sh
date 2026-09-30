@@ -21,6 +21,14 @@
 # shellcheck source=bin/fm-cursor-lib.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/fm-cursor-lib.sh"
 
+fm_session_windows() {
+  case "$(uname -s)" in MINGW*|MSYS*) return 0 ;; *) return 1 ;; esac
+}
+
+fm_herdr_current_codex() {
+  node "$(dirname -- "${BASH_SOURCE[0]}")/fm-herdr-current-codex.cjs" 2>/dev/null
+}
+
 # Known harness command names; extend when a new adapter is verified. omp is
 # anchored exactly like pi: its process name is the bare word `omp` (verified,
 # omp 18.1.11), and a substring match would claim ompd or comp.
@@ -114,7 +122,12 @@ fm_harness_process_matches() {  # <comm> <args>
 # session cannot be read off the ancestry at all, so the whole contiguous run is
 # reported and the callers below decide what they need from it.
 fm_harness_ancestry_pids() {
-  local pid=$$ comm args extending=0 printed=0
+  local pid=$$ comm args herdr extending=0 printed=0
+  if fm_session_windows; then
+    herdr=$(fm_herdr_current_codex) || return 1
+    printf '%s\n' "${herdr%% *}"
+    return 0
+  fi
   for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do
     comm=$(ps -o comm= -p "$pid" 2>/dev/null) || break
     args=$(ps -o args= -p "$pid" 2>/dev/null)
@@ -163,10 +176,28 @@ EOF
 # True if $1 is a live process that looks like a verified harness.
 fm_harness_pid_alive() {
   local pid=$1 comm args
+  if fm_session_windows; then
+    local herdr
+    herdr=$(fm_herdr_current_codex) || return 1
+    [ "${herdr%% *}" = "$pid" ] && fm_session_pid_alive "$pid"
+    return $?
+  fi
   kill -0 "$pid" 2>/dev/null || return 1
   comm=$(ps -o comm= -p "$pid" 2>/dev/null) || return 1
   args=$(ps -o args= -p "$pid" 2>/dev/null)
   fm_harness_process_matches "$comm" "$args"
+}
+
+# A live but unverified native PID must block takeover, although it does not
+# prove a harness. Git Bash's kill/ps use a different PID namespace.
+fm_session_pid_alive() {
+  local pid=$1
+  case "$pid" in ''|0|*[!0-9]*) return 1 ;; esac
+  if fm_session_windows; then
+    node -e 'try { process.kill(Number(process.argv[1]), 0) } catch (e) { process.exit(e.code === "EPERM" ? 0 : 1) }' "$pid"
+  else
+    fm_harness_pid_alive "$pid"
+  fi
 }
 
 # --- trusted same-session identity -------------------------------------------
@@ -192,11 +223,17 @@ fm_harness_pid_alive() {
 # non-goal. Two genuinely different live sessions sharing one id is not a
 # supported state (Claude refuses to resume a running session under its id).
 
-# Print the Claude session id this process may own with, or return 1. $1 is the
-# ancestry list an earlier walk already produced, so a caller that walked once
-# need not walk again.
+# Print a verified Claude or Windows Herdr Codex session id, or return 1.
+# $1 is the ancestry list an earlier Unix walk already produced.
 fm_session_lock_trusted_session_id() {  # [<ancestry-pids>]
   local id=${CLAUDE_CODE_SESSION_ID:-} claude_pid=${CLAUDE_PID:-} pids=${1:-} pid comm args
+
+  if fm_session_windows; then
+    local herdr
+    herdr=$(fm_herdr_current_codex) || return 1
+    printf 'herdr:codex:%s\n' "${herdr#* }"
+    return 0
+  fi
   [ -n "$id" ] || return 1
   case "$id" in *$'\n'*|*$'\r'*) return 1 ;; esac
   case "$claude_pid" in ''|*[!0-9]*) return 1 ;; esac
@@ -234,10 +271,15 @@ fm_session_lock_recorded_session_id() {  # <state>
 # the trusted id equals the id recorded beside the lock. No trusted id, no
 # sidecar, or a different recorded id is false.
 fm_session_lock_same_session() {  # <state> [<ancestry-pids>]
-  local state=$1 trusted recorded
+  local state=$1 trusted recorded current lock_pid
   trusted=$(fm_session_lock_trusted_session_id "${2:-}") || return 1
   recorded=$(fm_session_lock_recorded_session_id "$state") || return 1
-  [ "$recorded" = "$trusted" ]
+  [ "$recorded" = "$trusted" ] || return 1
+  if fm_session_windows; then
+    current=$(fm_herdr_current_codex) || return 1
+    lock_pid=$(cat "$state/.lock" 2>/dev/null) || return 1
+    [ "$lock_pid" = "${current%% *}" ]
+  fi
 }
 
 # Print the pid bin/fm-lock.sh records on lock line 1 for this session. For a
@@ -251,6 +293,10 @@ fm_session_lock_same_session() {  # <state> [<ancestry-pids>]
 fm_session_lock_anchor_pid() {
   local pids
   pids=$(fm_harness_ancestry_pids) || return 1
+  if fm_session_windows; then
+    printf '%s\n' "$pids"
+    return 0
+  fi
   if fm_session_lock_trusted_session_id "$pids" >/dev/null; then
     printf '%s\n' "$CLAUDE_PID"
     return 0
@@ -271,12 +317,18 @@ fm_session_lock_anchor_pid() {
 # held by a harness outside this ancestry under another (or no) session id, or
 # an ancestry that cannot be resolved all fail closed.
 fm_session_lock_owned_by_self() {
-  local state=$1 lock_pid pids pid
+  local state=$1 lock_pid pids pid trusted recorded
   lock_pid=$(cat "$state/.lock" 2>/dev/null || true)
   case "$lock_pid" in
     ''|*[!0-9]*) return 1 ;;
   esac
   pids=$(fm_harness_ancestry_pids) || return 1
+  if fm_session_windows; then
+    trusted=$(fm_session_lock_trusted_session_id "$pids") || return 1
+    recorded=$(fm_session_lock_recorded_session_id "$state") || return 1
+    [ "$trusted" = "$recorded" ] && [ "$lock_pid" = "$pids" ]
+    return
+  fi
   while IFS= read -r pid; do
     [ "$pid" = "$lock_pid" ] && return 0
   done <<EOF
@@ -301,8 +353,14 @@ fm_session_lock_foreign_owner_live() {
   case "$lock_pid" in
     ''|*[!0-9]*) return 1 ;;
   esac
-  fm_harness_pid_alive "$lock_pid" || return 1
-  pids=$(fm_harness_ancestry_pids) || return 1
+  fm_session_pid_alive "$lock_pid" || return 1
+  pids=$(fm_harness_ancestry_pids) || {
+    if fm_session_windows; then
+      FM_SESSION_LOCK_FOREIGN_OWNER_PID=$lock_pid
+      return 0
+    fi
+    return 1
+  }
   while IFS= read -r pid; do
     [ "$pid" = "$lock_pid" ] && return 1
   done <<EOF
@@ -363,6 +421,21 @@ fm_session_lock_inspect() {  # <state>
       return 0
       ;;
   esac
+  if fm_session_windows; then
+    if fm_session_pid_alive "$pid"; then
+      if fm_harness_pid_alive "$pid" && fm_session_lock_owned_by_self "$state"; then
+        FM_LOCK_INSPECT_STATE=held
+        FM_LOCK_INSPECT_LIVE_HARNESS=true
+      else
+        FM_LOCK_INSPECT_STATE=unknown
+        FM_LOCK_INSPECT_LIVE_HARNESS=unknown
+      fi
+    else
+      FM_LOCK_INSPECT_STATE=stale
+      FM_LOCK_INSPECT_LIVE_HARNESS=false
+    fi
+    return 0
+  fi
   if kill -0 "$pid" 2>/dev/null; then
     if fm_harness_pid_alive "$pid"; then
       FM_LOCK_INSPECT_STATE=held

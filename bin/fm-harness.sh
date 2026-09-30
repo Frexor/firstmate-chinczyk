@@ -427,6 +427,14 @@ detect_own() {
   local marker ancestry strength harness pin
   pin=$(supervision_primary_pin) || exit 2
   [ -z "$pin" ] || { echo "$pin"; return; }
+  case "$(uname -s)" in
+    MINGW*|MSYS*)
+      if node "$SCRIPT_DIR/fm-herdr-current-codex.cjs" >/dev/null 2>&1; then
+        echo codex
+        return
+      fi
+      ;;
+  esac
   marker=$(harness_marker)
   ancestry=$(harness_ancestry)
   if [ -z "$ancestry" ]; then

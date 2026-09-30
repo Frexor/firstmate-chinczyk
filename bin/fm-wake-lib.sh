@@ -489,6 +489,20 @@ fm_lock_prepare_owner() {
   [ "$back" = "$mypid" ]
 }
 
+fm_lock_make_link() {  # <owner-directory> <lock-path>
+  local owner=$1 lock=$2 script
+  case "$_FM_UNAME" in
+    MINGW*|MSYS*)
+      # Git Bash's `ln -s` may create a plain directory, breaking the lock's
+      # owner-token comparison. A native junction retains readlink semantics.
+      script=$(cygpath -w "$FM_WAKE_LIB_DIR/fm-windows-junction.ps1") || return 1
+      powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass \
+        -File "$script" "$(cygpath -w "$owner")" "$(cygpath -w "$lock")" >/dev/null 2>&1
+      ;;
+    *) ln -s "$owner" "$lock" 2>/dev/null ;;
+  esac
+}
+
 fm_lock_link_owner() {
   local lockdir=$1 owner
   owner=$(readlink "$lockdir" 2>/dev/null) || return 1
@@ -568,7 +582,7 @@ fm_lock_try_create() {
     fm_lock_discard_owner "$ownerdir"
     return 1
   fi
-  if ln -s "$ownerdir" "$lockdir" 2>/dev/null && fm_lock_points_to_owner "$lockdir" "$ownerdir"; then
+  if fm_lock_make_link "$ownerdir" "$lockdir" && fm_lock_points_to_owner "$lockdir" "$ownerdir"; then
     if fm_lock_claim "$lockdir" "$ownerdir" "$allowed_steal_owner"; then
       FM_LOCK_OWNER_DIR=$ownerdir
       return 0

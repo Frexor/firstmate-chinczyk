@@ -64,6 +64,7 @@ Full detail on every feature lives in [docs/architecture.md](docs/architecture.m
 
 The first mate detects and offers to install supported missing tools after you approve.
 Backend-specific setup is linked in [Documentation](#documentation).
+On Windows with Herdr, Firstmate verifies the current Codex pane and session through Herdr before taking the session lock; see [Herdr setup](docs/herdr-backend.md).
 
 ### Recommended harnesses
 

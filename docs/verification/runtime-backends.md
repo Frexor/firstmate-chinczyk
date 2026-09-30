@@ -6,6 +6,16 @@ This record contains reusable version-scoped evidence for active runtime guarant
 The backend guides own current setup, safety boundaries, and limitations.
 Exact task chronology, branch names, temporary homes, local paths, process ids, thread ids, and delivery transcripts remain in private reports or PR evidence.
 
+## Windows Herdr Codex session ownership
+
+Verified on 2026-09-30 with Windows 11, Git Bash, Herdr 0.9.1, and Codex 0.159.2.
+Git Bash `ps -o` returns `unknown option -- o`, while Herdr's current pane identifies the same Codex session as `CODEX_SESSION_ID` and reports one foreground Codex process.
+`bash tests/fm-herdr-current-codex.test.sh` passes matching and mismatched pane, session, process, and environment cases.
+`bash tests/fm-herdr-windows-session-live-e2e.test.sh` checks the installed Herdr and Codex without a model turn.
+With Herdr socket access, it reported `ok - Windows Herdr Codex session and process verified without a model turn`.
+The session-start command completed with `lock acquired`, `primary harness: codex`, and no missing required tools; `bin/fm-lock.sh status` reported the live harness PID.
+The Herdr backend guide owns the current Windows behavior and its read-only failure boundary.
+
 ## Harness detection precedence
 
 Firstmate's own harness comes from two kinds of evidence, and `bin/fm-harness.sh` owns how they combine: an environment marker names its harness, and the nearest harness process in the parent chain proves who owns the process tree.

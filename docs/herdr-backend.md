@@ -55,6 +55,10 @@ A remote second-mate agent is the one case with no choice: it always runs on Her
 Herdr is also auto-detected when the primary runs natively under `HERDR_ENV=1` and is not inside tmux.
 A tmux pane nested inside Herdr resolves to tmux because the innermost multiplexer wins.
 An auto-detected Herdr spawn stays silent, matching the verified tmux default path.
+On Windows, Git Bash's `ps` lacks the process fields used by the Unix ancestry check.
+A Codex primary therefore takes the session lock only when Herdr's current pane reports the same Codex session ID and one foreground Codex process; an unavailable or mismatched Herdr result leaves the session read-only.
+The lock uses that process's native Windows PID and records the session ID beside it.
+Windows lock links are native junctions because Git Bash can otherwise materialize `ln -s` as a plain directory.
 
 ### Spawn preflight and CI
 

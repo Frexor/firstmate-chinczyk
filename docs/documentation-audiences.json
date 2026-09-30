@@ -285,6 +285,10 @@
       "audience": "public-product"
     },
     {
+      "path": "PROJECT.md",
+      "audience": "agent-runtime"
+    },
+    {
       "path": "README.md",
       "audience": "public-product"
     },

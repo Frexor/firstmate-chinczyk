@@ -4,7 +4,7 @@
 > odswiezany przy kazdym commicie (globalny git hook, zob. agent-portability).
 
 ## Cel
-<h1 align="center">firstmate</h1> <p align="center">
+Coordinate software work across projects through supervised agents, durable task records, and guarded delivery.
 
 <!-- project-md:auto:start - generowane przez skills/project-md (Update-ProjectMd.ps1); nie edytowac recznie -->
 
@@ -13,6 +13,7 @@
 - zmiany robocze: 1 plikow | nie wypchniete commity: ? | ostatni commit: 2026-09-30
 
 ## Ostatnie zmiany (automatyczny, git log -8)
+- `2026-09-30` fix: Support Windows Herdr session startup
 - `2026-09-30` Import a squashed Firstmate snapshot.
 
 ## TODO (automatyczny - z TODO.md)
